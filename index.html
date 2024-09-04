@@ -1,0 +1,533 @@
+<html><head>
+<title>Decision Tree Prediction</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.11.4/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.net.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    :root {
+        --primary-color: #4A90E2;
+        --secondary-color: #50E3C2;
+        --background-color: #F7F9FC;
+        --text-color: #2C3E50;
+        --card-background: #FFFFFF;
+        --card-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        --hover-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        --highlight-color: #FF6B6B;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        line-height: 1.6;
+        overflow-x: hidden;
+        min-height: 100vh;
+        width: 100vw;
+    }
+
+    #vanta-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+    }
+
+    h1 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 2.5rem;
+        font-weight: 600;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .content-wrapper {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 20px;
+        justify-content: space-between;
+        flex: 1;
+    }
+
+    .controls, .chart-container {
+        background-color: var(--card-background);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+    }
+
+    .controls:hover, .chart-container:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    .controls {
+        flex: 0 0 300px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: auto;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .chart-container {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: linear-gradient(135deg, #2C3E50 0%, #4CA1AF 100%);
+    }
+
+    h3 {
+        margin-bottom: 5px;
+        color: #FFFFFF;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    select, button {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    select:focus, button:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--secondary-color);
+    }
+
+    select {
+        background-color: rgba(255, 255, 255, 0.9);
+        color: var(--text-color);
+    }
+
+    button {
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    button:hover {
+        background-color: #3ED1B0;
+    }
+
+    #decisionTree {
+        width: 100%;
+        height: 100%;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+        backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+        background-color: var(--card-background);
+        margin: 15% auto;
+        padding: 30px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 600px;
+        border-radius: 15px;
+        box-shadow: var(--hover-shadow);
+    }
+
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        transition: color 0.3s ease;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: var(--text-color);
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    @media screen and (max-width: 768px) {
+        body {
+            overflow-y: auto;
+        }
+
+        .container {
+            min-height: auto;
+            height: auto;
+        }
+
+        .content-wrapper {
+            flex-direction: column;
+        }
+
+        .controls, .chart-container {
+            width: 100%;
+        }
+
+        .controls {
+            flex: 0 0 auto;
+        }
+
+        .chart-container {
+            flex: 1 0 auto;
+            height: 60vh;
+        }
+
+        #decisionTree {
+            height: 100%;
+        }
+    }
+</style>
+</head>
+<body>
+<div id="vanta-background"></div>
+<div class="container">
+    <h1>Decision Tree Prediction</h1>
+    <div class="content-wrapper">
+        <div class="controls">
+            <h3>Outlook</h3>
+            <select id="outlook">
+                <option value="">Select Outlook</option>
+                <option value="sunny">Sunny</option>
+                <option value="overcast">Overcast</option>
+                <option value="rainy">Rainy</option>
+            </select>
+            <h3>Temperature</h3>
+            <select id="temp">
+                <option value="">Select Temperature</option>
+                <option value="hot">Hot</option>
+                <option value="mild">Mild</option>
+                <option value="cool">Cool</option>
+            </select>
+            <h3>Humidity</h3>
+            <select id="humidity">
+                <option value="">Select Humidity</option>
+                <option value="high">High</option>
+                <option value="normal">Normal</option>
+            </select>
+            <h3>Windy</h3>
+            <select id="windy">
+                <option value="">Select Windy</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+            </select>
+            <button id="predictBtn">Generate Prediction</button>
+            <button id="explanationBtn">Graph Explanation</button>
+        </div>
+        <div class="chart-container">
+            <div id="decisionTree"></div>
+        </div>
+    </div>
+</div>
+
+<div id="explanationModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Graph Explanation</h2>
+        <p>In this decision tree, "yes" and "no" represent the prediction for whether to play or not play based on the weather conditions:</p>
+        <ul>
+            <li><strong>Yes:</strong> Conditions are suitable for play</li>
+            <li><strong>No:</strong> Conditions are not suitable for play</li>
+        </ul>
+        <p>The tree helps predict the decision based on the input weather conditions (outlook, temperature, humidity, and wind).</p>
+    </div>
+</div>
+
+<script>
+const treeData = {
+    "name": "outlook",
+    "children": [
+        {
+            "name": "sunny",
+            "children": [
+                {
+                    "name": "humidity",
+                    "children": [
+                        {"name": "high", "children": [{"name": "no", "id": "no1"}]},
+                        {"name": "normal", "children": [{"name": "yes", "id": "yes1"}]}
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "overcast",
+            "children": [{"name": "yes", "id": "yes2"}]
+        },
+        {
+            "name": "rainy",
+            "children": [
+                {
+                    "name": "windy",
+                    "children": [
+                        {"name": "true", "children": [{"name": "no", "id": "no2"}]},
+                        {"name": "false", "children": [{"name": "yes", "id": "yes3"}]}
+                    ]
+                }
+            ]
+        }
+    ]
+};
+
+function createTree() {
+    const container = d3.select("#decisionTree");
+    container.selectAll("*").remove();
+
+    const width = container.node().getBoundingClientRect().width;
+    const height = container.node().getBoundingClientRect().height;
+    const margin = {top: 20, right: 90, bottom: 30, left: 90};
+
+    const svg = container
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const tree = d3.tree().size([height - margin.top - margin.bottom, width - margin.left - margin.right]);
+    const root = d3.hierarchy(treeData);
+    tree(root);
+
+    const link = svg.selectAll(".link")
+        .data(root.links())
+        .enter().append("path")
+        .attr("class", "link")
+        .attr("d", d3.linkHorizontal()
+            .x(d => d.y)
+            .y(d => d.x))
+        .attr("fill", "none")
+        .attr("stroke", "#FFFFFF")
+        .attr("stroke-width", 2);
+
+    const node = svg.selectAll(".node")
+        .data(root.descendants())
+        .enter().append("g")
+        .attr("class", d => "node" + (d.children ? " node--internal" : " node--leaf"))
+        .attr("transform", d => `translate(${d.y},${d.x})`);
+
+    node.append("circle")
+        .attr("r", 10)
+        .style("fill", "#4A90E2");
+
+    node.append("text")
+        .attr("dy", ".35em")
+        .attr("x", d => d.children ? -13 : 13)
+        .style("text-anchor", d => d.children ? "end" : "start")
+        .style("fill", "#FFFFFF")
+        .text(d => d.data.name);
+
+    return svg;
+}
+
+let svg = createTree();
+
+function resetTree() {
+    return new Promise((resolve) => {
+        gsap.killTweensOf(svg.selectAll(".node circle").nodes());
+        gsap.to(svg.selectAll(".link").nodes(), {
+            stroke: "#FFFFFF",
+            strokeWidth: 2,
+            duration: 0.5,
+            ease: "power2.inOut"
+        });
+
+        gsap.to(svg.selectAll(".node circle").nodes(), {
+            fill: "#4A90E2",
+            scale: 1,
+            duration: 0.5,
+            ease: "power2.inOut",
+            onComplete: resolve
+        });
+    });
+}
+
+function highlightPath(path) {
+    // Highlight the path with 3D animation effect
+    for (let i = 0; i < path.length - 1; i++) {
+        const currentNode = svg.selectAll(".node")
+            .filter(d => d.data.name === path[i]);
+        const nextNode = svg.selectAll(".node")
+            .filter(d => d.data.name === path[i + 1] || d.data.id === path[i + 1]);
+        
+        if (!currentNode.empty() && !nextNode.empty()) {
+            const link = svg.selectAll(".link")
+                .filter(d => 
+                    (d.source.data.name === path[i] && (d.target.data.name === path[i + 1] || d.target.data.id === path[i + 1])) ||
+                    (d.target.data.name === path[i] && (d.source.data.name === path[i + 1] || d.source.data.id === path[i + 1]))
+                );
+
+            gsap.to(link.node(), {
+                strokeWidth: 4,
+                stroke: "#FF6B6B",
+                duration: 0.5,
+                ease: "power2.inOut",
+                delay: i * 0.2
+            });
+
+            gsap.to(currentNode.select("circle").node(), {
+                fill: "#FF6B6B",
+                scale: 1.2,
+                duration: 0.5,
+                ease: "back.out(1.7)",
+                delay: i * 0.2
+            });
+        }
+    }
+
+    // Highlight the final node (yes or no)
+    const finalNode = svg.selectAll(".node")
+        .filter(d => d.data.id === path[path.length - 1]);
+    
+    if (!finalNode.empty()) {
+        gsap.to(finalNode.select("circle").node(), {
+            fill: "#FF6B6B",
+            scale: 1.5,
+            duration: 0.5,
+            ease: "elastic.out(1, 0.3)",
+            delay: (path.length - 1) * 0.2,
+            onComplete: () => {
+                gsap.to(finalNode.select("circle").node(), {
+                    scale: 1.2,
+                    yoyo: true,
+                    repeat: -1,
+                    duration: 0.8,
+                    ease: "power1.inOut"
+                });
+            }
+        });
+    }
+}
+
+async function predict() {
+    // Reset the tree to initial state
+    await resetTree();
+
+    const outlook = document.getElementById("outlook").value;
+    const temp = document.getElementById("temp").value;
+    const humidity = document.getElementById("humidity").value;
+    const windy = document.getElementById("windy").value;
+
+    if (!outlook || !temp || !humidity || !windy) {
+        alert("Please select all options before generating a prediction.");
+        return;
+    }
+
+    let path = ["outlook"];
+
+    if (outlook === "sunny") {
+        path.push("sunny", "humidity");
+        if (humidity === "high") {
+            path.push("high", "no1");
+        } else if (humidity === "normal") {
+            path.push("normal", "yes1");
+        }
+    } else if (outlook === "overcast") {
+        path.push("overcast", "yes2");
+    } else if (outlook === "rainy") {
+        path.push("rainy", "windy");
+        if (windy === "true") {
+            path.push("true", "no2");
+        } else if (windy === "false") {
+            path.push("false", "yes3");
+        }
+    }
+
+    // Add a small delay before highlighting the new path
+    setTimeout(() => highlightPath(path), 600);
+}
+
+document.getElementById("predictBtn").addEventListener("click", predict);
+
+// Modal functionality
+const modal = document.getElementById("explanationModal");
+const btn = document.getElementById("explanationBtn");
+const span = document.getElementsByClassName("close")[0];
+
+btn.onclick = function() {
+  modal.style.display = "block";
+}
+
+span.onclick = function() {
+  modal.style.display = "none";
+}
+
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+// Responsive design
+function handleResize() {
+    svg = createTree();
+}
+
+window.addEventListener('resize', handleResize);
+
+// Initialize VANTA.NET
+VANTA.NET({
+  el: "#vanta-background",
+  mouseControls: true,
+  touchControls: true,
+  gyroControls: false,
+  minHeight: 200.00,
+  minWidth: 200.00,
+  scale: 1.00,
+  scaleMobile: 1.00,
+  color: 0x4A90E2,
+  backgroundColor: 0x2C3E50,
+  points: 10.00,
+  maxDistance: 20.00,
+  spacing: 17.00
+})
+
+// Initial call to set up the layout
+handleResize();
+</script>
+</body>
+</html>
